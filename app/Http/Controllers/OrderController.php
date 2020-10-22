@@ -7,6 +7,26 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function index(Request $request) {
+        $userId = \Request('user_id');
+        $order = Order::query();
+
+        // if ($userId) {
+        //     $order->where('user_id', $userId);
+        // }
+
+        $order->when($userId, function($query) use ($userId) {
+            return $query->where('user_id', $userId);
+        });
+
+        $order = $order->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $order
+        ]);
+    }
+
     public function create(Request $request) {
         $data = $request->all();
         $user = $data['user'];
@@ -18,7 +38,7 @@ class OrderController extends Controller
         ]);
 
         $transactionDetails = [
-            'order_id' => $order->id,
+            'order_id' => $order->id . \Str::random(5),
             'gross_amount' => $course['price']
         ];
 
@@ -45,10 +65,20 @@ class OrderController extends Controller
         $snapUrl = $this->getMidtransSnapUrl($midtransParams);
         
         $order->update([
-            'snap_url' => $snapUrl
+            'snap_url' => $snapUrl,
+            'metadata' => [
+                'course_id' => $course['id'],
+                'course_name' => $course['name'],
+                'course_price' => $course['price'],
+                'course_thumbnail' => $course['thumbnail'],
+                'course_level' => $course['level'],
+            ]
         ]);
         
-        return response()->json($snapUrl);
+        return response()->json([
+            'status'=> 'success',
+            'data' => $order
+        ]);
     }
 
     private function getMidtransSnapUrl($params) {
